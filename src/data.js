@@ -17,27 +17,27 @@ export async function saveSettings(settings) {
   await setDoc(doc(db, 'settings', 'main'), settings);
 }
 
-// onSnapshot mantém tudo sincronizado em tempo real entre corretores —
-// se alguém muda o status de uma casa no celular, todo mundo vê na hora,
-// sem precisar recarregar a página.
-export function subscribeProperties(onData, onError) {
-  const q = query(collection(db, 'properties'));
+// onSnapshot mantém tudo sincronizado em tempo real entre corretores.
+function subscribeCollection(name, sortKey, onData, onError) {
+  const q = query(collection(db, name));
   return onSnapshot(q, snap => {
-    const props = snap.docs
+    const items = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    onData(props);
+      .sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+    onData(items);
   }, onError);
 }
 
+export function subscribeProperties(onData, onError) {
+  return subscribeCollection('properties', 'createdAt', onData, onError);
+}
+
 export function subscribeSelections(onData, onError) {
-  const q = query(collection(db, 'selections'));
-  return onSnapshot(q, snap => {
-    const sels = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    onData(sels);
-  }, onError);
+  return subscribeCollection('selections', 'createdAt', onData, onError);
+}
+
+export function subscribeLeads(onData, onError) {
+  return subscribeCollection('leads', 'updatedAt', onData, onError);
 }
 
 export async function saveProperty(property) {
@@ -54,4 +54,12 @@ export async function saveSelection(selection) {
 
 export async function deleteSelection(id) {
   await deleteDoc(doc(db, 'selections', id));
+}
+
+export async function saveLead(lead) {
+  await setDoc(doc(db, 'leads', lead.id), lead);
+}
+
+export async function deleteLead(id) {
+  await deleteDoc(doc(db, 'leads', id));
 }

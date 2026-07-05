@@ -372,7 +372,7 @@ function LandingView({ onTeam, onClient }) {
       <WatermarkTriangle />
       <div className="landing-glow" />
       <div className="landing-hero">
-        <img className="landing-logo" src="/logo.jpg" alt="Alpha Imóveis" />
+        <img className="landing-logo" src="/logo.png" alt="Alpha Imóveis" />
       </div>
       <div className="landing-cards">
         <button className="landing-card" onClick={onTeam}>

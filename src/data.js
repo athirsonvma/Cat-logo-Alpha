@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDoc, getDocs, setDoc, deleteDoc, query
+  collection, doc, getDoc, setDoc, deleteDoc, onSnapshot, query
 } from 'firebase/firestore';
 import { db } from './firebase.js';
 
@@ -17,11 +17,27 @@ export async function saveSettings(settings) {
   await setDoc(doc(db, 'settings', 'main'), settings);
 }
 
-export async function getProperties() {
-  const snap = await getDocs(query(collection(db, 'properties')));
-  return snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+// onSnapshot mantém tudo sincronizado em tempo real entre corretores —
+// se alguém muda o status de uma casa no celular, todo mundo vê na hora,
+// sem precisar recarregar a página.
+export function subscribeProperties(onData, onError) {
+  const q = query(collection(db, 'properties'));
+  return onSnapshot(q, snap => {
+    const props = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    onData(props);
+  }, onError);
+}
+
+export function subscribeSelections(onData, onError) {
+  const q = query(collection(db, 'selections'));
+  return onSnapshot(q, snap => {
+    const sels = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    onData(sels);
+  }, onError);
 }
 
 export async function saveProperty(property) {
@@ -30,13 +46,6 @@ export async function saveProperty(property) {
 
 export async function deleteProperty(id) {
   await deleteDoc(doc(db, 'properties', id));
-}
-
-export async function getSelections() {
-  const snap = await getDocs(query(collection(db, 'selections')));
-  return snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 }
 
 export async function saveSelection(selection) {

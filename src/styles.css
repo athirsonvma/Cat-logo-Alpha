@@ -4,15 +4,15 @@
 html, body, #root { height: 100%; margin: 0; }
 
 .re-app {
-  --bg: #17181B;
-  --bg-elevated: #1D1F23;
-  --surface: #202226;
-  --surface-2: #26282D;
-  --border: #34363B;
-  --border-soft: #2A2C31;
-  --text: #F3F3F1;
-  --text-soft: #A6A8AD;
-  --text-faint: #6E7075;
+  --bg: #0D0E10;
+  --bg-elevated: #151618;
+  --surface: #18191C;
+  --surface-2: #1F2023;
+  --border: #2A2B2F;
+  --border-soft: #232427;
+  --text: #F6F6F4;
+  --text-soft: #9A9C9F;
+  --text-faint: #5C5E62;
   --accent: #4C8DFF;
   --accent-dark: #3B72D6;
   --accent-bg: rgba(76,141,255,0.12);
@@ -55,14 +55,23 @@ html, body, #root { height: 100%; margin: 0; }
 .icon-btn.danger:hover { background: var(--danger-bg); }
 .link-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-size: 13px; font-weight: 600; padding: 6px 0; }
 
-.brand { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 15px; font-family: var(--font-display); letter-spacing: .01em; }
+.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 15px; font-family: var(--font-display); letter-spacing: .04em; text-transform: uppercase; }
 .brand svg { color: var(--accent); flex-shrink: 0; }
+.brand span {
+  background: linear-gradient(135deg, #FFFFFF 0%, #B9BBC0 45%, #FFFFFF 70%, #8C8E93 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+.watermark-triangle {
+  position: absolute; top: -60px; right: -80px; width: 520px; height: 520px;
+  color: var(--text); opacity: .035; pointer-events: none; z-index: 0;
+}
 
 .landing { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 20px; position: relative; overflow: hidden; }
 .landing::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(var(--border) 1px, transparent 1px); background-size: 24px 24px; opacity: .5; mask-image: radial-gradient(ellipse at top, black, transparent 70%); }
 .landing-glow { position: absolute; top: -140px; left: 50%; transform: translateX(-50%); width: 460px; height: 460px; background: radial-gradient(circle, rgba(76,141,255,0.22), transparent 70%); filter: blur(30px); pointer-events: none; }
 .landing-hero { position: relative; text-align: center; margin-bottom: 36px; display: flex; flex-direction: column; align-items: center; }
-.landing-logo { width: 132px; height: auto; margin-bottom: 4px; }
+.landing-logo { width: 240px; height: auto; margin-bottom: 4px; }
 .landing-cards { position: relative; display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; max-width: 560px; }
 .landing-card { width: 230px; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 6px; transition: transform .15s ease, border-color .15s ease, background .15s ease; }
 .landing-card:hover { transform: translateY(-2px); border-color: var(--accent); background: var(--surface-2); }
@@ -116,6 +125,18 @@ html, body, #root { height: 100%; margin: 0; }
 
 .status-pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: .03em; padding: 4px 10px 4px 8px; border-radius: 100px; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.status-select { border: none; cursor: pointer; appearance: none; -webkit-appearance: none; padding: 4px 22px 4px 8px; background-image: none; }
+.status-select::-ms-expand { display: none; }
+
+.prop-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft); flex-wrap: wrap; }
+.days-badge { font-size: 11px; color: var(--text-faint); font-family: var(--font-mono); }
+.days-badge.warn { color: var(--warn); }
+.edited-by { font-size: 11px; color: var(--text-faint); font-style: italic; }
+
+.toggle-sold { display: inline-flex; align-items: center; gap: 6px; }
+.toggle-sold.active { background: var(--surface-2); color: var(--text); border-color: var(--accent); }
+
+.stale-warning { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--warn); margin-top: 2px; }
 
 .photo-thumb { position: relative; background: var(--surface-2); overflow: hidden; }
 .photo-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--border); }

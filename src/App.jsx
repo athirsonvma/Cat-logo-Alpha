@@ -3,11 +3,11 @@ import {
   Home, Bed, Bath, Car, Ruler, MapPin, Search, Plus, X, Check, Copy,
   Share2, Lock, ArrowLeft, Pencil, Trash2, Image as ImageIcon,
   MessageCircle, ClipboardList, Users, ChevronRight,
-  ChevronLeft, Loader2, AlertCircle
+  ChevronLeft, Loader2, AlertCircle, Eye, EyeOff, CopyPlus
 } from 'lucide-react';
 import {
-  getSettings, saveSettings, getProperties, saveProperty, deleteProperty,
-  getSelections, saveSelection, deleteSelection
+  getSettings, saveSettings, subscribeProperties, subscribeSelections,
+  saveProperty, deleteProperty, saveSelection, deleteSelection
 } from './data.js';
 import { uploadToCloudinary, cloudinaryResize } from './cloudinary.js';
 
@@ -36,9 +36,22 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+function daysOnMarket(createdAt) {
+  if (!createdAt) return 0;
+  return Math.max(0, Math.floor((Date.now() - createdAt) / (1000 * 60 * 60 * 24)));
+}
+
 function LogoMark({ size = 20 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L22 21H2L12 2Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function WatermarkTriangle() {
+  return (
+    <svg className="watermark-triangle" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M12 2L22 21H2L12 2Z" fill="currentColor" />
     </svg>
   );
@@ -54,6 +67,23 @@ function StatusStamp({ status }) {
   );
 }
 
+function StatusQuickSelect({ status, onChange }) {
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.disponivel;
+  return (
+    <select
+      className="status-pill status-select"
+      value={status}
+      onClick={e => e.stopPropagation()}
+      onChange={e => onChange(e.target.value)}
+      style={{ color: cfg.textColor, background: cfg.bg }}
+    >
+      <option value="disponivel">Disponível</option>
+      <option value="reservado">Reservado</option>
+      <option value="vendido">Vendido</option>
+    </select>
+  );
+}
+
 function PhotoThumb({ src, alt, className }) {
   const [error, setError] = useState(false);
   useEffect(() => { setError(false); }, [src]);
@@ -65,15 +95,17 @@ function PhotoThumb({ src, alt, className }) {
   );
 }
 
-function PropertyCard({ property, onEdit, onDelete }) {
+function PropertyCard({ property, onEdit, onDelete, onDuplicate, onStatusChange }) {
   const thumb = property.photos && property.photos[0] ? cloudinaryResize(property.photos[0], 400) : '';
+  const days = daysOnMarket(property.createdAt);
   return (
     <div className="prop-card">
       <PhotoThumb src={thumb} alt={property.title} className="prop-card-photo" />
       <div className="prop-card-body">
         <div className="prop-card-top">
-          <StatusStamp status={property.status} />
+          <StatusQuickSelect status={property.status} onChange={v => onStatusChange(property, v)} />
           <div className="prop-card-actions">
+            <button className="icon-btn" onClick={() => onDuplicate(property)} aria-label="Duplicar"><CopyPlus size={15} /></button>
             <button className="icon-btn" onClick={() => onEdit(property)} aria-label="Editar"><Pencil size={15} /></button>
             <button className="icon-btn danger" onClick={() => onDelete(property)} aria-label="Excluir"><Trash2 size={15} /></button>
           </div>
@@ -86,6 +118,10 @@ function PropertyCard({ property, onEdit, onDelete }) {
           <span><Bath size={14} /> {property.bathrooms || 0}</span>
           <span><Ruler size={14} /> {property.area || 0}m²</span>
           <span><Car size={14} /> {property.vagas || 0}</span>
+        </div>
+        <div className="prop-card-footer">
+          <span className={days > 45 ? 'days-badge warn' : 'days-badge'}>{days} {days === 1 ? 'dia' : 'dias'} no mercado</span>
+          {property.lastEditedBy && <span className="edited-by">editado por {property.lastEditedBy}</span>}
         </div>
       </div>
     </div>
@@ -333,6 +369,7 @@ function SelectionForm({ properties, onCreate, onClose }) {
 function LandingView({ onTeam, onClient }) {
   return (
     <div className="landing">
+      <WatermarkTriangle />
       <div className="landing-glow" />
       <div className="landing-hero">
         <img className="landing-logo" src="/logo.jpg" alt="Alpha Imóveis" />
@@ -445,6 +482,9 @@ export default function App() {
   const [settings, setSettings] = useState({ teamPasscode: 'equipe2026', agencyName: 'Alpha Imóveis', whatsappNumber: '' });
   const [properties, setProperties] = useState([]);
   const [selections, setSelections] = useState([]);
+  const [corretorName, setCorretorName] = useState(() => {
+    try { return localStorage.getItem('corretorName') || ''; } catch (e) { return ''; }
+  });
 
   const [passInput, setPassInput] = useState('');
   const [passError, setPassError] = useState('');
@@ -454,6 +494,7 @@ export default function App() {
   const [teamTab, setTeamTab] = useState('imoveis');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
+  const [showSold, setShowSold] = useState(false);
 
   const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
@@ -467,23 +508,32 @@ export default function App() {
 
   const [toast, setToast] = useState(null);
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setLoadError(false);
+    let settingsReady = false, propsReady = false, selsReady = false;
+    function checkReady() { if (mounted && settingsReady && propsReady && selsReady) setLoading(false); }
+
+    getSettings()
+      .then(s => { if (mounted) { setSettings(s); settingsReady = true; checkReady(); } })
+      .catch(() => { if (mounted) setLoadError(true); });
+
+    const unsubProps = subscribeProperties(
+      props => { if (mounted) { setProperties(props); propsReady = true; checkReady(); } },
+      () => { if (mounted) setLoadError(true); }
+    );
+    const unsubSels = subscribeSelections(
+      sels => { if (mounted) { setSelections(sels); selsReady = true; checkReady(); } },
+      () => { if (mounted) setLoadError(true); }
+    );
+
+    return () => { mounted = false; unsubProps(); unsubSels(); };
+  }, []);
 
   function showToast(text) { setToast(text); setTimeout(() => setToast(null), 2600); }
 
-  async function loadAll() {
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const [s, props, sels] = await Promise.all([getSettings(), getProperties(), getSelections()]);
-      setSettings(s);
-      setProperties(props);
-      setSelections(sels);
-    } catch (e) {
-      setLoadError(true);
-    }
-    setLoading(false);
-  }
+  function reloadPage() { window.location.reload(); }
 
   function handleTeamGate() {
     if (passInput === settings.teamPasscode) { setView('team'); setPassInput(''); setPassError(''); }
@@ -504,9 +554,9 @@ export default function App() {
 
   async function handleSaveProperty(property) {
     const exists = properties.some(p => p.id === property.id);
+    const withMeta = { ...property, lastEditedBy: corretorName || 'Equipe', lastEditedAt: Date.now() };
     try {
-      await saveProperty(property);
-      setProperties(prev => exists ? prev.map(p => p.id === property.id ? property : p) : [property, ...prev]);
+      await saveProperty(withMeta);
       showToast(exists ? 'Imóvel atualizado.' : 'Imóvel adicionado ao catálogo.');
     } catch (e) {
       showToast('Não foi possível salvar o imóvel. Verifique sua conexão.');
@@ -515,12 +565,34 @@ export default function App() {
     setEditingProperty(null);
   }
 
+  async function handleDuplicateProperty(property) {
+    const dup = {
+      ...property,
+      id: uid(),
+      title: property.title + ' (cópia)',
+      status: 'disponivel',
+      createdAt: Date.now(),
+      lastEditedBy: corretorName || 'Equipe',
+      lastEditedAt: Date.now(),
+    };
+    try { await saveProperty(dup); showToast('Imóvel duplicado.'); }
+    catch (e) { showToast('Não foi possível duplicar o imóvel.'); }
+  }
+
+  async function handleQuickStatusChange(property, newStatus) {
+    try {
+      await saveProperty({ ...property, status: newStatus, lastEditedBy: corretorName || 'Equipe', lastEditedAt: Date.now() });
+      showToast(`Status atualizado para ${STATUS_CONFIG[newStatus].label}.`);
+    } catch (e) {
+      showToast('Não foi possível atualizar o status.');
+    }
+  }
+
   async function handleCreateSelection({ clientName, note, propertyIds }) {
     const code = generateCode(selections.map(s => s.id));
     const sel = { id: code, clientName, note, propertyIds, createdAt: Date.now() };
     try {
       await saveSelection(sel);
-      setSelections(prev => [sel, ...prev]);
       setShowSelectionForm(false);
       setNewSelectionResult(sel);
     } catch (e) {
@@ -528,9 +600,14 @@ export default function App() {
     }
   }
 
-  async function persistSettings(next) {
+  function persistSettings(next) {
     setSettings(next);
-    try { await saveSettings(next); } catch (e) { showToast('Não foi possível salvar as configurações.'); }
+    saveSettings(next).catch(() => showToast('Não foi possível salvar as configurações.'));
+  }
+
+  function updateCorretorName(name) {
+    setCorretorName(name);
+    try { localStorage.setItem('corretorName', name); } catch (e) {}
   }
 
   function copyCode(code) {
@@ -551,10 +628,18 @@ export default function App() {
   function nextPhoto(id, len) { setPhotoIdx(prev => ({ ...prev, [id]: ((prev[id] || 0) + 1) % len })); }
   function prevPhoto(id, len) { setPhotoIdx(prev => ({ ...prev, [id]: ((prev[id] || 0) - 1 + len) % len })); }
 
+  function staleCount(sel) {
+    return sel.propertyIds.filter(id => {
+      const p = properties.find(pr => pr.id === id);
+      return !p || p.status === 'vendido';
+    }).length;
+  }
+
   const filteredProperties = properties.filter(p => {
     const matchesSearch = !search || p.title.toLowerCase().includes(search.toLowerCase()) || (p.bairro || '').toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'todos' || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const hideSold = !showSold && p.status === 'vendido' && statusFilter !== 'vendido';
+    return matchesSearch && matchesStatus && !hideSold;
   });
 
   if (loading) {
@@ -571,7 +656,7 @@ export default function App() {
         <div className="loading-screen" style={{ flexDirection: 'column', gap: 16 }}>
           <AlertCircle size={26} />
           <span>Não foi possível conectar ao banco de dados.</span>
-          <button className="btn-primary" onClick={loadAll}>Tentar de novo</button>
+          <button className="btn-primary" onClick={reloadPage}>Tentar de novo</button>
         </div>
       </div>
     );
@@ -627,6 +712,9 @@ export default function App() {
                   <option value="reservado">Reservado</option>
                   <option value="vendido">Vendido</option>
                 </select>
+                <button className={`btn-ghost small toggle-sold ${showSold ? 'active' : ''}`} onClick={() => setShowSold(v => !v)}>
+                  {showSold ? <Eye size={14} /> : <EyeOff size={14} />} Vendidos
+                </button>
                 <button className="btn-primary" onClick={() => { setEditingProperty(null); setShowPropertyForm(true); }}>
                   <Plus size={16} /> Novo imóvel
                 </button>
@@ -648,7 +736,9 @@ export default function App() {
                   {filteredProperties.map(p => (
                     <PropertyCard key={p.id} property={p}
                       onEdit={prop => { setEditingProperty(prop); setShowPropertyForm(true); }}
-                      onDelete={prop => setConfirmDelete({ kind: 'property', item: prop })} />
+                      onDelete={prop => setConfirmDelete({ kind: 'property', item: prop })}
+                      onDuplicate={handleDuplicateProperty}
+                      onStatusChange={handleQuickStatusChange} />
                   ))}
                 </div>
               )}
@@ -671,22 +761,28 @@ export default function App() {
                 </div>
               ) : (
                 <div className="selection-list">
-                  {selections.map(sel => (
-                    <div className="selection-card" key={sel.id}>
-                      <div className="selection-info">
-                        <strong>{sel.clientName}</strong>
-                        <span>{sel.propertyIds.length} imóve{sel.propertyIds.length === 1 ? 'l' : 'is'} · {new Date(sel.createdAt).toLocaleDateString('pt-BR')}</span>
+                  {selections.map(sel => {
+                    const stale = staleCount(sel);
+                    return (
+                      <div className="selection-card" key={sel.id}>
+                        <div className="selection-info">
+                          <strong>{sel.clientName}</strong>
+                          <span>{sel.propertyIds.length} imóve{sel.propertyIds.length === 1 ? 'l' : 'is'} · {new Date(sel.createdAt).toLocaleDateString('pt-BR')}</span>
+                          {stale > 0 && (
+                            <span className="stale-warning"><AlertCircle size={12} /> {stale} imóvel(is) já vendido(s) ou removido(s)</span>
+                          )}
+                        </div>
+                        <div className="selection-code" onClick={() => copyCode(sel.id)} title="Copiar código">
+                          {sel.id} <Copy size={13} />
+                        </div>
+                        <div className="selection-actions">
+                          <a className="icon-btn" href={whatsappSelectionLink(sel)} target="_blank" rel="noopener noreferrer" aria-label="Enviar por WhatsApp"><MessageCircle size={15} /></a>
+                          <button className="icon-btn" onClick={() => openClientPreview(sel)} aria-label="Pré-visualizar"><Share2 size={15} /></button>
+                          <button className="icon-btn danger" onClick={() => setConfirmDelete({ kind: 'selection', item: sel })} aria-label="Excluir"><Trash2 size={15} /></button>
+                        </div>
                       </div>
-                      <div className="selection-code" onClick={() => copyCode(sel.id)} title="Copiar código">
-                        {sel.id} <Copy size={13} />
-                      </div>
-                      <div className="selection-actions">
-                        <a className="icon-btn" href={whatsappSelectionLink(sel)} target="_blank" rel="noopener noreferrer" aria-label="Enviar por WhatsApp"><MessageCircle size={15} /></a>
-                        <button className="icon-btn" onClick={() => openClientPreview(sel)} aria-label="Pré-visualizar"><Share2 size={15} /></button>
-                        <button className="icon-btn danger" onClick={() => setConfirmDelete({ kind: 'selection', item: sel })} aria-label="Excluir"><Trash2 size={15} /></button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -695,6 +791,9 @@ export default function App() {
           {teamTab === 'config' && (
             <div className="team-content">
               <div className="config-panel">
+                <label className="field"><span>Seu nome (aparece como "editado por" nos imóveis)</span>
+                  <input value={corretorName} onChange={e => updateCorretorName(e.target.value)} placeholder="Ex: Athirson" />
+                </label>
                 <label className="field"><span>Nome da imobiliária</span>
                   <input value={settings.agencyName} onChange={e => persistSettings({ ...settings, agencyName: e.target.value })} />
                 </label>
@@ -704,7 +803,7 @@ export default function App() {
                 <label className="field"><span>Código de acesso da equipe</span>
                   <input value={settings.teamPasscode} onChange={e => persistSettings({ ...settings, teamPasscode: e.target.value })} />
                 </label>
-                <p className="config-hint">Compartilhe este código com os corretores para que eles também possam gerenciar o catálogo.</p>
+                <p className="config-hint">Compartilhe o código de acesso com os corretores. O nome é salvo só neste navegador/dispositivo.</p>
               </div>
             </div>
           )}
@@ -765,19 +864,15 @@ export default function App() {
             <div className="modal-footer">
               <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>Cancelar</button>
               <button className="btn-danger" onClick={async () => {
-                if (confirmDelete.kind === 'property') {
-                  try {
+                try {
+                  if (confirmDelete.kind === 'property') {
                     await deleteProperty(confirmDelete.item.id);
-                    setProperties(prev => prev.filter(p => p.id !== confirmDelete.item.id));
                     showToast('Imóvel removido.');
-                  } catch (e) { showToast('Não foi possível excluir.'); }
-                } else {
-                  try {
+                  } else {
                     await deleteSelection(confirmDelete.item.id);
-                    setSelections(prev => prev.filter(s => s.id !== confirmDelete.item.id));
                     showToast('Seleção removida.');
-                  } catch (e) { showToast('Não foi possível excluir.'); }
-                }
+                  }
+                } catch (e) { showToast('Não foi possível excluir.'); }
                 setConfirmDelete(null);
               }}>Excluir</button>
             </div>

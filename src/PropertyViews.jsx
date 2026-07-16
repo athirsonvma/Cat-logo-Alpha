@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Home, Bed, Bath, Car, Ruler, MapPin, Search, Plus, X, Check, Copy,
   Share2, Lock, ArrowLeft, Pencil, Trash2, Image as ImageIcon,
@@ -81,14 +81,37 @@ export function PhotoThumb({ src, fallbackSrc, alt, className, onClick }) {
 
 export function PhotoLightbox({ property, onClose }) {
   const [idx, setIdx] = useState(0);
+  const touchStartX = useRef(null);
   const photos = property.photos || [];
-  if (photos.length === 0) return null;
+
   function next() { setIdx(i => (i + 1) % photos.length); }
   function prev() { setIdx(i => (i - 1 + photos.length) % photos.length); }
+
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'ArrowRight') next();
+      else if (e.key === 'ArrowLeft') prev();
+      else if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photos.length]);
+
+  if (photos.length === 0) return null;
+
+  function handleTouchStart(e) { touchStartX.current = e.touches[0].clientX; }
+  function handleTouchEnd(e) {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(delta) > 40) { delta > 0 ? prev() : next(); }
+    touchStartX.current = null;
+  }
+
   return (
     <div className="modal-overlay lightbox-overlay" onClick={onClose}>
       <button className="icon-btn lightbox-close" onClick={onClose}><X size={18} /></button>
-      <div className="lightbox-body" onClick={e => e.stopPropagation()}>
+      <div className="lightbox-body" onClick={e => e.stopPropagation()} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         <PhotoThumb src={cloudinaryResize(photos[idx], 1400)} fallbackSrc={photos[idx]} alt={property.title} className="lightbox-photo" />
         {photos.length > 1 && (
           <>
@@ -513,9 +536,17 @@ export function ClientView({ agencyName, selection, properties, photoIdx, onNext
         {properties.map(p => {
           const idx = photoIdx[p.id] || 0;
           const photos = p.photos || [];
+          let touchStartX = null;
+          function handleTouchStart(e) { touchStartX = e.touches[0].clientX; }
+          function handleTouchEnd(e) {
+            if (touchStartX === null || photos.length <= 1) return;
+            const delta = e.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(delta) > 40) { delta > 0 ? onPrev(p.id, photos.length) : onNext(p.id, photos.length); }
+            touchStartX = null;
+          }
           return (
             <div className="client-card" key={p.id}>
-              <div className="client-carousel">
+              <div className="client-carousel" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
                 <PhotoThumb src={photos[idx] ? cloudinaryResize(photos[idx], 1000) : ''} fallbackSrc={photos[idx]} alt={p.title} className="client-photo" />
                 {photos.length > 1 && (
                   <>

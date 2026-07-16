@@ -219,6 +219,7 @@ html, body, #root { height: 100%; margin: 0; }
 .client-list { display: flex; flex-direction: column; gap: 28px; max-width: 640px; margin: 0 auto; padding: 0 20px 60px; }
 .client-card { background: var(--surface); border-radius: 18px; overflow: hidden; border: 1px solid var(--border); }
 .client-carousel { position: relative; height: 260px; background: var(--surface-2); }
+.client-photo { position: absolute; inset: 0; }
 .client-carousel .status-pill { position: absolute; top: 12px; left: 12px; background: rgba(23,24,27,.85); z-index: 2; }
 .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 50%; background: rgba(23,24,27,.75); display: flex; align-items: center; justify-content: center; z-index: 2; color: var(--text); }
 .carousel-btn.left { left: 10px; }

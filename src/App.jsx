@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Home, Search, Plus, X, Copy, Share2, MessageCircle, ClipboardList,
-  Loader2, AlertCircle, Eye, EyeOff, UserPlus, LayoutGrid, CalendarClock, Map as MapIcon, List
+  Loader2, AlertCircle, Eye, EyeOff, UserPlus, LayoutGrid, CalendarClock, Map as MapIcon, List,
+  Sun, Moon
 } from 'lucide-react';
 import {
   getSettings, saveSettings, subscribeProperties, subscribeSelections, subscribeLeads,
@@ -27,6 +28,15 @@ export default function App() {
   const [corretorName, setCorretorName] = useState(() => {
     try { return localStorage.getItem('corretorName') || ''; } catch (e) { return ''; }
   });
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem('theme') || 'dark'; } catch (e) { return 'dark'; }
+  });
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+  }
 
   const [passInput, setPassInput] = useState('');
   const [passError, setPassError] = useState('');
@@ -243,7 +253,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="re-app">
+      <div className={`re-app ${theme === 'light' ? 'theme-light' : ''}`}>
         <div className="loading-screen"><Loader2 className="spin" size={26} /> <span>Carregando catálogo...</span></div>
       </div>
     );
@@ -251,7 +261,7 @@ export default function App() {
 
   if (loadError) {
     return (
-      <div className="re-app">
+      <div className={`re-app ${theme === 'light' ? 'theme-light' : ''}`}>
         <div className="loading-screen" style={{ flexDirection: 'column', gap: 16 }}>
           <AlertCircle size={26} />
           <span>Não foi possível conectar ao banco de dados.</span>
@@ -262,7 +272,11 @@ export default function App() {
   }
 
   return (
-    <div className="re-app">
+    <div className={`re-app ${theme === 'light' ? 'theme-light' : ''}`}>
+      <button className="theme-toggle" onClick={toggleTheme} aria-label="Alternar tema" title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
+
       {view === 'landing' && (
         <LandingView onTeam={() => setView('teamGate')} onClient={() => setView('clientGate')} />
       )}

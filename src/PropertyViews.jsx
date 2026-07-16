@@ -3,7 +3,7 @@ import {
   Home, Bed, Bath, Car, Ruler, MapPin, Search, Plus, X, Check, Copy,
   Share2, Lock, ArrowLeft, Pencil, Trash2, Image as ImageIcon,
   MessageCircle, ClipboardList, Users, ChevronRight,
-  ChevronLeft, Loader2, AlertCircle, Eye, EyeOff, CopyPlus, UserPlus
+  ChevronLeft, Loader2, AlertCircle, Eye, EyeOff, CopyPlus, UserPlus, Sun, Moon
 } from 'lucide-react';
 import { uploadToCloudinary, cloudinaryResize } from './cloudinary.js';
 import { formatPrice, uid, daysOnMarket, normalizePhone, formatPhoneDisplay } from './helpers.js';
@@ -520,12 +520,15 @@ export function GateScreen({ title, description, value, onChange, onSubmit, erro
   );
 }
 
-export function ClientView({ agencyName, selection, properties, photoIdx, onNext, onPrev, onExit, whatsappLink }) {
+export function ClientView({ agencyName, selection, properties, photoIdx, onNext, onPrev, onExit, whatsappLink, theme, onToggleTheme }) {
   return (
     <div className="client-view">
       <header className="client-header">
         <button className="back-link light" onClick={onExit}><ArrowLeft size={15} /> Sair</button>
         <div className="brand"><LogoMark size={18} /> <span>{agencyName}</span></div>
+        <button className="icon-btn" onClick={onToggleTheme} aria-label="Alternar tema">
+          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
       </header>
       <div className="client-hero">
         <h1>Seleção para {selection.clientName}</h1>

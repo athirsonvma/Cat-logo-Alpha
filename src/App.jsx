@@ -273,9 +273,11 @@ export default function App() {
 
   return (
     <div className={`re-app ${theme === 'light' ? 'theme-light' : ''}`}>
-      <button className="theme-toggle" onClick={toggleTheme} aria-label="Alternar tema" title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
-        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-      </button>
+      {(view === 'landing' || view === 'teamGate' || view === 'clientGate') && (
+        <button className="theme-toggle" onClick={toggleTheme} aria-label="Alternar tema" title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+      )}
 
       {view === 'landing' && (
         <LandingView onTeam={() => setView('teamGate')} onClient={() => setView('clientGate')} />
@@ -311,6 +313,9 @@ export default function App() {
               <button className={teamTab === 'selecoes' ? 'active' : ''} onClick={() => setTeamTab('selecoes')}>Seleções</button>
               <button className={teamTab === 'config' ? 'active' : ''} onClick={() => setTeamTab('config')}>Configurações</button>
             </nav>
+            <button className="icon-btn" onClick={toggleTheme} aria-label="Alternar tema" title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
             <button className="btn-ghost small" onClick={() => setView('landing')}>Sair</button>
           </header>
 
@@ -477,6 +482,8 @@ export default function App() {
           onPrev={prevPhoto}
           onExit={() => setView(cameFromTeam ? 'team' : 'landing')}
           whatsappLink={whatsappInterestLink}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       )}
 

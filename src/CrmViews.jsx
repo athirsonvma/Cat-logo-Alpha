@@ -101,10 +101,12 @@ function LeadCard({ lead, onOpen }) {
   const active = isLeadActive(lead);
   const stale = isLeadStale(lead);
   const overdue = active && lead.nextActionDate && lead.nextActionDate < todayStr();
+  const tempCfg = TEMPERATURE_CONFIG[lead.temperature] || TEMPERATURE_CONFIG.morno;
 
   return (
     <div
       className={`lead-card ${stale ? 'stale' : ''}`}
+      style={{ borderLeftColor: stale ? undefined : tempCfg.dot }}
       draggable
       onDragStart={e => e.dataTransfer.setData('text/plain', lead.id)}
       onClick={onOpen}

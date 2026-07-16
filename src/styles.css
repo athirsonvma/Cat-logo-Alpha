@@ -352,3 +352,19 @@ html, body, #root { height: 100%; margin: 0; }
 .lost-reason-row > span:first-child { width: 150px; flex-shrink: 0; color: var(--text-soft); }
 .lost-reason-bar-track { flex: 1; height: 6px; background: var(--surface-2); border-radius: 100px; overflow: hidden; }
 .lost-reason-bar-fill { height: 100%; background: var(--warn); border-radius: 100px; }
+
+/* ---- Visualizador de fotos (lightbox) ---- */
+.prop-card-photo.clickable { cursor: pointer; }
+.prop-card-photo.clickable:hover img { transform: scale(1.03); }
+.prop-card-photo img { transition: transform .2s ease; }
+
+.lightbox-overlay { background: rgba(6,7,8,.92); flex-direction: column; gap: 14px; }
+.lightbox-body { position: relative; width: 100%; max-width: 900px; height: 72vh; max-height: 640px; }
+.lightbox-photo { width: 100%; height: 100%; border-radius: 12px; }
+.lightbox-photo img { object-fit: contain; background: #000; }
+.lightbox-close { position: absolute; top: 24px; right: 24px; background: rgba(255,255,255,.08); z-index: 5; }
+.lightbox-title { color: var(--text-soft); font-size: 13px; text-align: center; }
+
+@media (max-width: 640px) {
+  .lightbox-body { height: 60vh; }
+}

@@ -58,23 +58,67 @@ export function StatusQuickSelect({ status, onChange }) {
   );
 }
 
-export function PhotoThumb({ src, alt, className }) {
-  const [error, setError] = useState(false);
-  useEffect(() => { setError(false); }, [src]);
+export function PhotoThumb({ src, fallbackSrc, alt, className, onClick }) {
+  const [stage, setStage] = useState('primary'); // primary | fallback | error
+  useEffect(() => { setStage('primary'); }, [src]);
+  const showSrc = stage === 'error' ? null : (stage === 'fallback' ? fallbackSrc : src);
   return (
-    <div className={`photo-thumb ${className || ''}`}>
+    <div className={`photo-thumb ${className || ''}`} onClick={onClick}>
       <div className="photo-fallback"><Home size={26} strokeWidth={1.5} /></div>
-      {src && !error && <img src={src} alt={alt || ''} onError={() => setError(true)} />}
+      {showSrc && (
+        <img
+          src={showSrc}
+          alt={alt || ''}
+          onError={() => {
+            if (stage === 'primary' && fallbackSrc && fallbackSrc !== src) setStage('fallback');
+            else setStage('error');
+          }}
+        />
+      )}
     </div>
   );
 }
 
-export function PropertyCard({ property, onEdit, onDelete, onDuplicate, onStatusChange }) {
-  const thumb = property.photos && property.photos[0] ? cloudinaryResize(property.photos[0], 400) : '';
+export function PhotoLightbox({ property, onClose }) {
+  const [idx, setIdx] = useState(0);
+  const photos = property.photos || [];
+  if (photos.length === 0) return null;
+  function next() { setIdx(i => (i + 1) % photos.length); }
+  function prev() { setIdx(i => (i - 1 + photos.length) % photos.length); }
+  return (
+    <div className="modal-overlay lightbox-overlay" onClick={onClose}>
+      <button className="icon-btn lightbox-close" onClick={onClose}><X size={18} /></button>
+      <div className="lightbox-body" onClick={e => e.stopPropagation()}>
+        <PhotoThumb src={cloudinaryResize(photos[idx], 1400)} fallbackSrc={photos[idx]} alt={property.title} className="lightbox-photo" />
+        {photos.length > 1 && (
+          <>
+            <button className="carousel-btn left" onClick={prev}><ChevronLeft size={20} /></button>
+            <button className="carousel-btn right" onClick={next}><ChevronRight size={20} /></button>
+            <div className="carousel-dots">
+              {photos.map((_, i) => <span key={i} className={i === idx ? 'dot active' : 'dot'} />)}
+            </div>
+          </>
+        )}
+      </div>
+      <p className="lightbox-title">{property.title} · {idx + 1}/{photos.length}</p>
+    </div>
+  );
+}
+
+export function PropertyCard({ property, onEdit, onDelete, onDuplicate, onStatusChange, onViewPhotos }) {
+  const rawPhoto = property.photos && property.photos[0];
+  const thumb = rawPhoto ? cloudinaryResize(rawPhoto, 400) : '';
   const days = daysOnMarket(property.createdAt);
+  const hasPhotos = property.photos && property.photos.length > 0;
   return (
     <div className="prop-card">
-      <PhotoThumb src={thumb} alt={property.title} className="prop-card-photo" />
+      <PhotoThumb
+        src={thumb}
+        fallbackSrc={rawPhoto}
+        alt={property.title}
+        className={`prop-card-photo ${hasPhotos ? 'clickable' : ''}`}
+        onClick={hasPhotos ? () => onViewPhotos(property) : undefined}
+      />
       <div className="prop-card-body">
         <div className="prop-card-top">
           <StatusQuickSelect status={property.status} onChange={v => onStatusChange(property, v)} />
@@ -384,7 +428,7 @@ export function SelectionForm({ properties, leads, onCreate, onClose, presetClie
             {filtered.map(p => (
               <label key={p.id} className={`select-row ${selected.includes(p.id) ? 'checked' : ''}`}>
                 <input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggle(p.id)} />
-                <PhotoThumb src={p.photos && p.photos[0] ? cloudinaryResize(p.photos[0], 200) : ''} alt="" className="select-row-thumb" />
+                <PhotoThumb src={p.photos && p.photos[0] ? cloudinaryResize(p.photos[0], 200) : ''} fallbackSrc={p.photos && p.photos[0]} alt="" className="select-row-thumb" />
                 <div className="select-row-info">
                   <strong>{p.title}</strong>
                   <span>{p.bairro} · {formatPrice(p.price)}</span>
@@ -472,7 +516,7 @@ export function ClientView({ agencyName, selection, properties, photoIdx, onNext
           return (
             <div className="client-card" key={p.id}>
               <div className="client-carousel">
-                <PhotoThumb src={photos[idx] ? cloudinaryResize(photos[idx], 1000) : ''} alt={p.title} className="client-photo" />
+                <PhotoThumb src={photos[idx] ? cloudinaryResize(photos[idx], 1000) : ''} fallbackSrc={photos[idx]} alt={p.title} className="client-photo" />
                 {photos.length > 1 && (
                   <>
                     <button className="carousel-btn left" onClick={() => onPrev(p.id, photos.length)}><ChevronLeft size={18} /></button>

@@ -9,7 +9,7 @@ import {
 } from './data.js';
 import { uid, generateCode, todayStr, normalizePhone } from './helpers.js';
 import {
-  LogoMark, PropertyCard, PropertyForm, SelectionForm, LandingView, GateScreen, ClientView,
+  LogoMark, PropertyCard, PropertyForm, SelectionForm, LandingView, GateScreen, ClientView, PhotoLightbox,
 } from './PropertyViews.jsx';
 import { GoogleMapView } from './MapView.jsx';
 import {
@@ -42,6 +42,7 @@ export default function App() {
 
   const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
+  const [viewingPhotosProperty, setViewingPhotosProperty] = useState(null);
   const [showSelectionForm, setShowSelectionForm] = useState(false);
   const [selectionPreset, setSelectionPreset] = useState(null);
   const [newSelectionResult, setNewSelectionResult] = useState(null);
@@ -347,7 +348,8 @@ export default function App() {
                       onEdit={prop => { setEditingProperty(prop); setShowPropertyForm(true); }}
                       onDelete={prop => setConfirmDelete({ kind: 'property', item: prop })}
                       onDuplicate={handleDuplicateProperty}
-                      onStatusChange={handleQuickStatusChange} />
+                      onStatusChange={handleQuickStatusChange}
+                      onViewPhotos={setViewingPhotosProperty} />
                   ))}
                 </div>
               )}
@@ -462,6 +464,10 @@ export default function App() {
           onExit={() => setView(cameFromTeam ? 'team' : 'landing')}
           whatsappLink={whatsappInterestLink}
         />
+      )}
+
+      {viewingPhotosProperty && (
+        <PhotoLightbox property={viewingPhotosProperty} onClose={() => setViewingPhotosProperty(null)} />
       )}
 
       {showPropertyForm && (

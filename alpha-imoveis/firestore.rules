@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Aberto por enquanto: o app usa um código de acesso simples (não é
+    // login de verdade), então não há como o Firestore distinguir
+    // "corretor" de "qualquer pessoa" nesta fase. Ver nota de segurança
+    // no README antes de colocar dados sensíveis de clientes reais.
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
